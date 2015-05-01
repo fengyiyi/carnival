@@ -13,11 +13,14 @@ module Application
     , db
     ) where
 
+import Command (Command(..), parseCommand)
 import Control.Monad.Logger                 (liftLoc, runLoggingT)
 import Database.Persist.Postgresql          (createPostgresqlPool, pgConnStr,
                                              pgPoolSize, runSqlPool)
 import Import
 import Language.Haskell.TH.Syntax           (qLocation)
+import Model.Comment                        (deleteStaleComments)
+import Model.Site                           (upsertDemoSite)
 import Network.Wai.Handler.Warp             (Settings, defaultSettings,
                                              defaultShouldDisplayException,
                                              runSettings, setHost,
@@ -162,22 +165,18 @@ develMain = develMainHelper getApplicationDev
 -- | The @main@ function for an executable running this site.
 appMain :: IO ()
 appMain = do
-    -- Get the settings from all relevant sources
-    settings <- withEnv $ loadAppSettingsArgs
-        -- fall back to compile-time values, set to [] to require values at runtime
-        [configSettingsYmlValue]
-
-        -- allow environment variables to override
-        useEnv
-
-    -- Generate the foundation from the settings
+    settings <- getAppSettings
     foundation <- makeFoundation settings
-
-    -- Generate a WAI Application from the foundation
     app <- makeApplication foundation
 
-    -- Run the application with Warp
-    runSettings (warpSettings foundation) app
+    command <- parseCommand
+
+    case command of
+        RunServer -> runSettings (warpSettings foundation) app
+        DeleteStaleComments -> handler $ do
+            root <- getAppRoot
+            runDB $ deleteStaleComments =<< upsertDemoSite root
+
 
 withEnv :: IO a -> IO a
 withEnv = (loadEnv >>)

@@ -16,6 +16,7 @@ Flag library-only
 library
     hs-source-dirs:  ., app
     exposed-modules: Application
+                     Command
                      Foundation
                      Import
                      Import.NoFoundation
@@ -112,6 +113,7 @@ library
                  , containers
                  , vector
                  , time
+                 , optparse-applicative
 
                  , SHA                           >= 1.6.4      && < 1.7
                  , blaze-html
@@ -137,9 +139,6 @@ library
                  , yesod-text-markdown
 
 executable         carnival
-    if flag(library-only)
-        Buildable: False
-
     main-is:           main.hs
     hs-source-dirs:    app
     build-depends:     base, carnival
